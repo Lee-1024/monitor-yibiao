@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"monitor-yibiao/collector"
 	"monitor-yibiao/config"
 	"monitor-yibiao/protocol"
@@ -15,6 +16,11 @@ func main() {
 	exe, err := os.Executable()
 	if err != nil {
 		panic(err)
+	}
+	logFile, err := os.OpenFile(filepath.Join(filepath.Dir(exe), "monitor-sender.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err == nil {
+		defer logFile.Close()
+		log.SetOutput(logFile)
 	}
 	cfg, created, err := config.LoadOrCreate(filepath.Join(filepath.Dir(exe), "config.json"))
 	if err != nil {
@@ -34,7 +40,7 @@ func main() {
 	for {
 		s, err := c.Collect()
 		if err != nil {
-			fmt.Println("采集失败:", err)
+			log.Println("采集失败:", err)
 			time.Sleep(cfg.Interval())
 			continue
 		}
@@ -42,7 +48,7 @@ func main() {
 		f := protocol.Frame{Version: 1, Sequence: seq, Timestamp: time.Now().Unix(), CPU: s.CPU, Memory: s.Memory, GPU: s.GPU}
 		b, _ := protocol.Encode(f)
 		if err := conn.Send(b); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		time.Sleep(cfg.Interval())
 	}
