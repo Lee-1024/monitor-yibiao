@@ -29,7 +29,7 @@ func main() {
 		panic(err)
 	}
 	defer conn.Close()
-	c := collector.BasicCollector{}
+	c := collector.New()
 	var seq uint32
 	for {
 		s, _ := c.Collect()
