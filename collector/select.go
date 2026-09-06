@@ -8,5 +8,5 @@ func New() Collector {
 			return NvidiaCollector{}
 		}
 	}
-	return BasicCollector{}
+	return &SystemCollector{}
 }

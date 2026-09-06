@@ -32,7 +32,12 @@ func main() {
 	c := collector.New()
 	var seq uint32
 	for {
-		s, _ := c.Collect()
+		s, err := c.Collect()
+		if err != nil {
+			fmt.Println("采集失败:", err)
+			time.Sleep(cfg.Interval())
+			continue
+		}
 		seq++
 		f := protocol.Frame{Version: 1, Sequence: seq, Timestamp: time.Now().Unix(), CPU: s.CPU, Memory: s.Memory, GPU: s.GPU}
 		b, _ := protocol.Encode(f)
