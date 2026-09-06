@@ -2,6 +2,8 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
 	"os"
 	"time"
 )
@@ -36,6 +38,18 @@ func LoadOrCreate(path string) (Config, bool, error) {
 	if c.IntervalMS < 10 {
 		c.IntervalMS = 200
 	}
+	if err := validate(c); err != nil {
+		return Config{}, false, err
+	}
 	return c, false, nil
+}
+func validate(c Config) error {
+	if _, _, e := net.SplitHostPort(c.ESP32Address); e != nil {
+		return fmt.Errorf("invalid esp32_address: %w", e)
+	}
+	if c.IntervalMS < 10 || c.IntervalMS > 60000 {
+		return fmt.Errorf("interval_ms must be 10..60000")
+	}
+	return nil
 }
 func (c Config) Interval() time.Duration { return time.Duration(c.IntervalMS) * time.Millisecond }

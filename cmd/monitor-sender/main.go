@@ -5,7 +5,7 @@ import (
 	"monitor-yibiao/collector"
 	"monitor-yibiao/config"
 	"monitor-yibiao/protocol"
-	"net"
+	"monitor-yibiao/transport"
 	"os"
 	"path/filepath"
 	"time"
@@ -24,7 +24,7 @@ func main() {
 		fmt.Println("已生成 config.json，请修改后重新运行")
 		return
 	}
-	conn, err := net.Dial("udp", cfg.ESP32Address)
+	conn, err := transport.DialUDP(cfg.ESP32Address, 2*time.Second)
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +41,7 @@ func main() {
 		seq++
 		f := protocol.Frame{Version: 1, Sequence: seq, Timestamp: time.Now().Unix(), CPU: s.CPU, Memory: s.Memory, GPU: s.GPU}
 		b, _ := protocol.Encode(f)
-		if _, err := conn.Write(b); err != nil {
+		if err := conn.Send(b); err != nil {
 			fmt.Println(err)
 		}
 		time.Sleep(cfg.Interval())
