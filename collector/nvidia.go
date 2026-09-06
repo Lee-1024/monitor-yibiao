@@ -24,13 +24,13 @@ func (n NvidiaCollector) Collect() (Snapshot, error) {
 	if err != nil || len(row) < 3 {
 		return Snapshot{}, errors.New("invalid nvidia-smi output")
 	}
-	gpu, e1 := strconv.ParseFloat(strings.TrimSpace(row[0]), 64)
+	_, e1 := strconv.ParseFloat(strings.TrimSpace(row[0]), 64)
 	used, e2 := strconv.ParseFloat(strings.TrimSpace(row[1]), 64)
 	total, e3 := strconv.ParseFloat(strings.TrimSpace(row[2]), 64)
 	if e1 != nil || e2 != nil || e3 != nil || total <= 0 {
 		return Snapshot{}, errors.New("invalid nvidia metrics")
 	}
-	return Snapshot{GPU: ClampPercent(gpu), Memory: ClampPercent(used / total * 100)}, nil
+	return Snapshot{GPU: ClampPercent(used / total * 100)}, nil
 }
 
 func HasNvidia() bool { return exec.Command("nvidia-smi", "-L").Run() == nil }
