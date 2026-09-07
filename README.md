@@ -4,7 +4,7 @@ PC 端 Go 采集发送程序：通过 UDP JSON 向 ESP32 发送 CPU、内存、�
 
 Windows 使用：
 
-标准原理图接线图：[接线图.svg](接线图.svg)
+按实物丝印逐针脚接线：[接线图.md](接线图.md)
 
 ```bash
 将编译出的 `monitor-sender.exe` 双击运行。首次运行会在 exe 同目录生成 `config.json`，修改后再次双击即可。
