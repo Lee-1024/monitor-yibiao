@@ -38,7 +38,13 @@ func main() {
 	c := collector.New()
 	var seq uint32
 	for {
-		s, err := c.Collect()
+		var s collector.Snapshot
+		var err error
+		if cfg.TestMode {
+			s = collector.Snapshot{CPU: collector.ClampPercent(cfg.TestCPU)}
+		} else {
+			s, err = c.Collect()
+		}
 		if err != nil {
 			log.Println("采集失败:", err)
 			time.Sleep(cfg.Interval())

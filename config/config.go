@@ -9,11 +9,13 @@ import (
 )
 
 type Config struct {
-	ESP32Address string `json:"esp32_address"`
-	IntervalMS   int    `json:"interval_ms"`
+	ESP32Address string  `json:"esp32_address"`
+	IntervalMS   int     `json:"interval_ms"`
+	TestMode     bool    `json:"test_mode"`
+	TestCPU      float64 `json:"test_cpu"`
 }
 
-func Defaults() Config { return Config{ESP32Address: "192.168.4.2:9000", IntervalMS: 200} }
+func Defaults() Config { return Config{ESP32Address: "192.168.4.2:9000", IntervalMS: 200, TestCPU: 50} }
 func LoadOrCreate(path string) (Config, bool, error) {
 	b, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
