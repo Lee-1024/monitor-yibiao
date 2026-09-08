@@ -2,5 +2,6 @@
   "esp32_address": "192.168.4.2:9000",
   "interval_ms": 200,
   "test_mode": false,
-  "test_cpu": 50
+  "test_cpu": 50,
+  "test_memory": 50
 }

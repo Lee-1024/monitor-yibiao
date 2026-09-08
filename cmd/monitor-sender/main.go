@@ -41,7 +41,7 @@ func main() {
 		var s collector.Snapshot
 		var err error
 		if cfg.TestMode {
-			s = collector.Snapshot{CPU: collector.ClampPercent(cfg.TestCPU)}
+			s = collector.Snapshot{CPU: collector.ClampPercent(cfg.TestCPU), Memory: collector.ClampPercent(cfg.TestMemory)}
 		} else {
 			s, err = c.Collect()
 		}
