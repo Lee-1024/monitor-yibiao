@@ -30,6 +30,7 @@ func main() {
 		fmt.Println("已生成 config.json，请修改后重新运行")
 		return
 	}
+	log.Printf("config loaded: esp32=%s interval=%s test_mode=%t test_cpu=%.1f test_memory=%.1f", cfg.ESP32Address, cfg.Interval(), cfg.TestMode, cfg.TestCPU, cfg.TestMemory)
 	conn, err := transport.DialUDP(cfg.ESP32Address, 2*time.Second)
 	if err != nil {
 		panic(err)
@@ -41,7 +42,7 @@ func main() {
 		var s collector.Snapshot
 		var err error
 		if cfg.TestMode {
-			s = collector.Snapshot{CPU: collector.ClampPercent(cfg.TestCPU), Memory: collector.ClampPercent(cfg.TestMemory)}
+			s = collector.Snapshot{CPU: collector.ClampPercent(cfg.TestCPU), Memory: collector.ClampPercent(cfg.TestMemory), GPU: collector.ClampPercent(cfg.TestGPU)}
 		} else {
 			s, err = c.Collect()
 		}

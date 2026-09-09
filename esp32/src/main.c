@@ -161,6 +161,8 @@ zero(void)
 }
 static char wifi_ssid[33];
 static char wifi_password[65];
+static int hexval(char c){if(c>='0'&&c<='9')return c-'0';if(c>='a'&&c<='f')return c-'a'+10;if(c>='A'&&c<='F')return c-'A'+10;return -1;}
+static void url_decode(char *s){char *r=s;for(;*s;s++,r++){if(*s=='+'){*r=' ';}else if(*s=='%'&&hexval(s[1])>=0&&hexval(s[2])>=0){*r=(char)((hexval(s[1])<<4)|hexval(s[2]));s+=2;}else{*r=*s;}}*r=0;}
 
 static void load_wifi_config(void)
 {
@@ -171,6 +173,8 @@ static void load_wifi_config(void)
         n = sizeof(wifi_password);
         nvs_get_str(h, "password", wifi_password, &n);
         nvs_close(h);
+        url_decode(wifi_ssid);
+        url_decode(wifi_password);
     }
 }
 
@@ -178,7 +182,8 @@ static void on_wifi(void *a, esp_event_base_t b, int32_t id, void *d){
     if (b == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
         if (wifi_ssid[0]) { ESP_LOGI(TAG, "connecting WiFi: %s", wifi_ssid); esp_wifi_connect(); }
     } if (b == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
-        ESP_LOGW(TAG, "WiFi disconnected, retrying");
+        wifi_event_sta_disconnected_t *e = (wifi_event_sta_disconnected_t *)d;
+        ESP_LOGW(TAG, "WiFi disconnected, reason=%d, retrying", e ? e->reason : -1);
         zero();
         if (wifi_ssid[0]) esp_wifi_connect();
     } if (b == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
@@ -187,11 +192,12 @@ static void on_wifi(void *a, esp_event_base_t b, int32_t id, void *d){
         ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&e->ip_info.ip));
     }
 }
-static esp_err_t portal_get(httpd_req_t *req){char ip[16]="未连接";if(sta_netif){esp_netif_ip_info_t info;if(esp_netif_get_ip_info(sta_netif,&info)==ESP_OK&&info.ip.addr)snprintf(ip,sizeof(ip),IPSTR,IP2STR(&info.ip));}char body[1000];int n=snprintf(body,sizeof(body),"<html><meta charset='utf-8'><h2>ESP32 Monitor</h2><p>配置热点: %s</p><p>当前内网 IP: <b>%s</b></p><p>Go 地址: <b>%s:9000</b></p><form action='/save' method='get'>WiFi名称: <input name='ssid' required><br>WiFi密码: <input name='password' type='password'><br><button type='submit'>保存并重启</button></form></html>",AP_SSID,ip,ip);httpd_resp_set_type(req,"text/html; charset=utf-8");return httpd_resp_send(req,body,n);}
-static esp_err_t portal_save(httpd_req_t *req){char q[256]={0},ssid[33]={0},password[65]={0};if(httpd_req_get_url_query_str(req,q,sizeof(q))!=ESP_OK)return httpd_resp_send_err(req,HTTPD_400_BAD_REQUEST,"missing query");if(httpd_query_key_value(q,"ssid",ssid,sizeof(ssid))!=ESP_OK||!ssid[0])return httpd_resp_send_err(req,HTTPD_400_BAD_REQUEST,"ssid required");httpd_query_key_value(q,"password",password,sizeof(password));nvs_handle_t h;if(nvs_open("wifi",NVS_READWRITE,&h)!=ESP_OK)return httpd_resp_send_err(req,HTTPD_500_INTERNAL_SERVER_ERROR,"nvs open failed");esp_err_t e=nvs_set_str(h,"ssid",ssid);if(e==ESP_OK)e=nvs_set_str(h,"password",password);if(e==ESP_OK)e=nvs_commit(h);nvs_close(h);if(e!=ESP_OK)return httpd_resp_send_err(req,HTTPD_500_INTERNAL_SERVER_ERROR,"nvs save failed");httpd_resp_sendstr(req,"已保存 WiFi 配置，ESP32 即将重启");vTaskDelay(pdMS_TO_TICKS(500));esp_restart();return ESP_OK;}
-static void portal_start(void){httpd_config_t cfg=HTTPD_DEFAULT_CONFIG();if(httpd_start(&http_server,&cfg)==ESP_OK){httpd_uri_t uri={.uri="/",.method=HTTP_GET,.handler=portal_get};httpd_uri_t save={.uri="/save",.method=HTTP_GET,.handler=portal_save};httpd_register_uri_handler(http_server,&uri);httpd_register_uri_handler(http_server,&save);}}
+static esp_err_t portal_get(httpd_req_t *req){char ip[16]="not connected";if(sta_netif){esp_netif_ip_info_t info;if(esp_netif_get_ip_info(sta_netif,&info)==ESP_OK&&info.ip.addr)snprintf(ip,sizeof(ip),IPSTR,IP2STR(&info.ip));}char body[1100];int n=snprintf(body,sizeof(body),"<html><head><meta charset='utf-8'></head><body><h2>ESP32 Monitor</h2><p>Setup AP: %s</p><p>Saved WiFi: <b>%s</b></p><p>STA IP: <b>%s</b></p><p>Go endpoint: <b>%s:9000</b></p><hr><form action='/save' method='post'>WiFi SSID: <input name='ssid' required><br>WiFi password: <input name='password' type='password'><br><button type='submit'>Save and reboot</button></form></body></html>",AP_SSID,wifi_ssid[0]?wifi_ssid:"(none)",ip,ip);httpd_resp_set_type(req,"text/html; charset=utf-8");return httpd_resp_send(req,body,n);}
+static esp_err_t portal_save(httpd_req_t *req){char q[256]={0},ssid[33]={0},password[65]={0};int len=req->content_len;if(len<=0||len>=(int)sizeof(q))return httpd_resp_send_err(req,HTTPD_400_BAD_REQUEST,"invalid body");int got=httpd_req_recv(req,q,len);if(got!=len)return httpd_resp_send_err(req,HTTPD_400_BAD_REQUEST,"incomplete body");q[len]=0;if(httpd_query_key_value(q,"ssid",ssid,sizeof(ssid))!=ESP_OK||!ssid[0])return httpd_resp_send_err(req,HTTPD_400_BAD_REQUEST,"ssid required");httpd_query_key_value(q,"password",password,sizeof(password));nvs_handle_t h;if(nvs_open("wifi",NVS_READWRITE,&h)!=ESP_OK)return httpd_resp_send_err(req,HTTPD_500_INTERNAL_SERVER_ERROR,"nvs open failed");esp_err_t e=nvs_set_str(h,"ssid",ssid);if(e==ESP_OK)e=nvs_set_str(h,"password",password);if(e==ESP_OK)e=nvs_commit(h);nvs_close(h);if(e!=ESP_OK)return httpd_resp_send_err(req,HTTPD_500_INTERNAL_SERVER_ERROR,"nvs save failed");httpd_resp_set_type(req,"text/plain; charset=utf-8");httpd_resp_sendstr(req,"WiFi saved. ESP32 will reboot now.");vTaskDelay(pdMS_TO_TICKS(500));esp_restart();return ESP_OK;}
+static void portal_start(void){httpd_config_t cfg=HTTPD_DEFAULT_CONFIG();cfg.uri_match_fn=httpd_uri_match_wildcard;if(httpd_start(&http_server,&cfg)==ESP_OK){httpd_uri_t uri={.uri="/",.method=HTTP_GET,.handler=portal_get};httpd_uri_t captive={.uri="/*",.method=HTTP_GET,.handler=portal_get};httpd_uri_t save={.uri="/save",.method=HTTP_POST,.handler=portal_save};httpd_register_uri_handler(http_server,&uri);httpd_register_uri_handler(http_server,&captive);httpd_register_uri_handler(http_server,&save);}}
 static void wifi_start(void){
     load_wifi_config();
+    ESP_LOGI(TAG, "loaded WiFi config: ssid=%s password_length=%u", wifi_ssid[0] ? wifi_ssid : "(none)", (unsigned) strlen(wifi_password));
     esp_netif_init();
     esp_event_loop_create_default();
     sta_netif=esp_netif_create_default_wifi_sta();esp_netif_create_default_wifi_ap();
