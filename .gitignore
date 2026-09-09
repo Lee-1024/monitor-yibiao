@@ -6,6 +6,9 @@ dist/
 *.so
 *.dylib
 
+# PlatformIO generated environment configuration
+esp32/sdkconfig.*-direct-mcp
+
 # Runtime configuration and logs
 config.json
 *.log
