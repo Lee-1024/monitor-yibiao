@@ -3,6 +3,7 @@ package collector
 import (
 	"errors"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -45,22 +46,14 @@ func NewPlatformGPU() Collector {
 type AppleSiliconGPU struct{}
 
 func (AppleSiliconGPU) Collect() (Snapshot, error) {
-	out, e := exec.Command("ioreg", "-r", "-c", "IOAccelerator", "-d", "1", "-k", "PerformanceStatistics").Output()
+	out, e := exec.Command("sudo", "-n", "powermetrics", "-n", "1", "-i", "200", "--samplers", "gpu_power").CombinedOutput()
 	if e != nil {
 		return Snapshot{}, e
 	}
-	var s string = string(out)
-	for _, key := range []string{"Device Utilization %", "GPU Utilization"} {
-		i := strings.Index(s, key)
-		if i >= 0 {
-			tail := s[i:]
-			for _, tok := range strings.FieldsFunc(tail, func(r rune) bool { return r < '0' || r > '9' }) {
-				if tok != "" {
-					v, _ := strconv.ParseFloat(tok, 64)
-					return Snapshot{GPU: ClampPercent(v)}, nil
-				}
-			}
-		}
+	m := regexp.MustCompile(`GPU HW active residency:\s*([0-9]+(?:\.[0-9]+)?)%`).FindStringSubmatch(string(out))
+	if len(m) == 2 {
+		v, _ := strconv.ParseFloat(m[1], 64)
+		return Snapshot{GPU: ClampPercent(v)}, nil
 	}
 	return Snapshot{}, errors.New("apple gpu utilization unavailable")
 }

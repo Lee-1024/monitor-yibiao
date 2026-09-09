@@ -41,7 +41,25 @@ cp config.example.json config.json
 ./monitor-sender
 ```
 
-Apple Silicon 的 GPU 指标来自 IOAccelerator；统一内存没有独立 VRAM。
+Apple Silicon 的 GPU 指标来自 `powermetrics` 的 `GPU HW active residency`。统一内存没有独立 VRAM。
+
+Apple Silicon 启动前先授权一次：
+
+```bash
+sudo -v
+sudo powermetrics -n 1 -i 200 --samplers gpu_power
+```
+
+确认输出包含 `GPU HW active residency: ...%` 后，重新打包并启动：
+
+```bash
+./build-macos.sh
+cd dist/monitor-sender-macos
+cp config.example.json config.json
+./monitor-sender
+```
+
+`config.json` 中设置 `test_mode` 为 `false`。程序使用 `sudo -n` 调用 `powermetrics`，不会每个采样周期重复询问密码；sudo 授权失效时，日志会记录 GPU 采集错误。
 
 ## Windows
 
