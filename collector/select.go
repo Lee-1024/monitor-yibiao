@@ -4,14 +4,14 @@ import "runtime"
 
 func New() Collector {
 	if runtime.GOOS == "darwin" {
-		return AppleSiliconCollector{System: SystemCollector{}}
+		return CombinedCollector{System: SystemCollector{}, GPU: NewPlatformGPU()}
 	}
 	if runtime.GOOS == "windows" || runtime.GOOS == "linux" {
 		if HasNvidia() {
 			return CombinedCollector{System: SystemCollector{}, GPU: NvidiaCollector{}}
 		}
 	}
-	return SystemCollector{}
+	return CombinedCollector{System: SystemCollector{}, GPU: NewPlatformGPU()}
 }
 
 type AppleSiliconCollector struct{ System Collector }
