@@ -32,12 +32,13 @@ func parseNvidiaRow(row []string) (float64, error) {
 	if len(row) < 3 {
 		return 0, errors.New("invalid nvidia-smi output")
 	}
-	used, e1 := strconv.ParseFloat(strings.TrimSpace(row[1]), 64)
-	total, e2 := strconv.ParseFloat(strings.TrimSpace(row[2]), 64)
-	if e1 != nil || e2 != nil || total <= 0 {
+	utilization, e1 := strconv.ParseFloat(strings.TrimSpace(row[0]), 64)
+	_, e2 := strconv.ParseFloat(strings.TrimSpace(row[1]), 64)
+	total, e3 := strconv.ParseFloat(strings.TrimSpace(row[2]), 64)
+	if e1 != nil || e2 != nil || e3 != nil || total <= 0 {
 		return 0, errors.New("invalid nvidia metrics")
 	}
-	return ClampPercent(used / total * 100), nil
+	return ClampPercent(utilization), nil
 }
 
 func (n NvidiaCollector) Collect() (Snapshot, error) {
