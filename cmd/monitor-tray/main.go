@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"github.com/getlantern/systray"
 	"log"
 	"monitor-yibiao/collector"
@@ -12,8 +13,12 @@ import (
 	"time"
 )
 
+//go:embed assets/tray.ico
+var trayIcon []byte
+
 func main() { systray.Run(onReady, onExit) }
 func onReady() {
+	systray.SetIcon(trayIcon)
 	systray.SetTitle("Monitor")
 	systray.SetTooltip("CPU / Memory / GPU monitor")
 	quit := systray.AddMenuItem("退出", "Exit")

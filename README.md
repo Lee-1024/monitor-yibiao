@@ -69,7 +69,7 @@ cp config.example.json config.json
 .\build-windows.ps1
 ```
 
-生成 `dist/monitor-sender-windows-amd64.exe` 和 `dist/config.example.json`。将配置文件复制为 `config.json` 放在 exe 同目录，双击 exe 后程序运行在系统托盘，右键托盘图标退出。程序和 `nvidia-smi`/PowerShell 子进程都不会显示命令行窗口。NVIDIA 优先使用 `nvidia-smi` 的 `GPU-Util` 实时核心利用率，并自动查找 PATH、`System32` 和 NVIDIA NVSMI 安装目录；否则读取 Windows GPU Engine 性能计数器。`monitor-sender.log` 中的 `GPU backend` 可确认实际使用的后端。
+生成 `dist/monitor-sender-windows-amd64.exe` 和 `dist/config.example.json`。将配置文件复制为 `config.json` 放在 exe 同目录，双击 exe 后程序以绿色仪表图标运行在系统托盘，右键托盘图标退出。程序和 `nvidia-smi`/PowerShell 子进程都不会显示命令行窗口。NVIDIA 优先使用 `nvidia-smi` 的 `GPU-Util` 实时核心利用率，并自动查找 PATH、`System32` 和 NVIDIA NVSMI 安装目录；否则读取 Windows GPU Engine 性能计数器。`monitor-sender.log` 中的 `GPU backend` 可确认实际使用的后端。
 
 ## Linux
 
