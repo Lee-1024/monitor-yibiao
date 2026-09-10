@@ -3,12 +3,30 @@ package collector
 import (
 	"encoding/csv"
 	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
 
 type NvidiaCollector struct{ Command string }
+
+func nvidiaCommand() string {
+	if path, err := exec.LookPath("nvidia-smi"); err == nil {
+		return path
+	}
+	for _, path := range []string{
+		filepath.Join(os.Getenv("SystemRoot"), "System32", "nvidia-smi.exe"),
+		filepath.Join(os.Getenv("ProgramW6432"), "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"),
+		filepath.Join(os.Getenv("ProgramFiles"), "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"),
+	} {
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			return path
+		}
+	}
+	return "nvidia-smi"
+}
 
 func parseNvidiaRow(row []string) (float64, error) {
 	if len(row) < 3 {
@@ -25,9 +43,9 @@ func parseNvidiaRow(row []string) (float64, error) {
 func (n NvidiaCollector) Collect() (Snapshot, error) {
 	cmd := n.Command
 	if cmd == "" {
-		cmd = "nvidia-smi"
+		cmd = nvidiaCommand()
 	}
-	out, err := exec.Command(cmd, "--query-gpu=utilization.gpu,memory.used,memory.total", "--format=csv,noheader,nounits").Output()
+	out, err := commandOutput(cmd, "--query-gpu=utilization.gpu,memory.used,memory.total", "--format=csv,noheader,nounits")
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -43,4 +61,4 @@ func (n NvidiaCollector) Collect() (Snapshot, error) {
 	return Snapshot{GPU: v}, nil
 }
 
-func HasNvidia() bool { return exec.Command("nvidia-smi", "-L").Run() == nil }
+func HasNvidia() bool { return commandRun(nvidiaCommand(), "-L") == nil }

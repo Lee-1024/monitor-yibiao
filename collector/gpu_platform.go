@@ -2,7 +2,6 @@ package collector
 
 import (
 	"errors"
-	"os/exec"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -17,7 +16,7 @@ type CommandGPUCollector struct {
 }
 
 func (c CommandGPUCollector) Collect() (Snapshot, error) {
-	out, e := exec.Command(c.Command, c.Args...).Output()
+	out, e := commandOutput(c.Command, c.Args...)
 	if e != nil {
 		return Snapshot{}, e
 	}
@@ -46,7 +45,7 @@ func NewPlatformGPU() Collector {
 type AppleSiliconGPU struct{}
 
 func (AppleSiliconGPU) Collect() (Snapshot, error) {
-	out, e := exec.Command("sudo", "-n", "powermetrics", "-n", "1", "-i", "200", "--samplers", "gpu_power").CombinedOutput()
+	out, e := commandOutput("sudo", "-n", "powermetrics", "-n", "1", "-i", "200", "--samplers", "gpu_power")
 	if e != nil {
 		return Snapshot{}, e
 	}

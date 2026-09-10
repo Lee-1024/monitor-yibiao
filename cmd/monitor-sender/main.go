@@ -36,7 +36,8 @@ func main() {
 		panic(err)
 	}
 	defer conn.Close()
-	c := collector.New()
+	c, backend := collector.NewWithBackend()
+	log.Printf("GPU backend: %s", backend)
 	var seq uint32
 	for {
 		var s collector.Snapshot
